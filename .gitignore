@@ -12,5 +12,6 @@ venv/
 *.pkl
 *.zip
 *.bin
+*.vscode
 output
 version.py

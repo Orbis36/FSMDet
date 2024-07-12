@@ -424,7 +424,7 @@ class SparseHEDNet(nn.Module):
                 spatial_shape=x.spatial_shape,
                 batch_size=x.batch_size
             )
-
+        # 拿到
         inside_box_pred = self.cls_conv(detached_x).features.permute(1, 0)
 
         if self.training:
@@ -434,13 +434,16 @@ class SparseHEDNet(nn.Module):
             self.forward_ret_dict['inside_box_pred'] = inside_box_pred
             self.forward_ret_dict['inside_box_target'] = inside_box_target
 
+        # 拿到背景的mask: (4, N)
         group_inside_mask = inside_box_pred.sigmoid() > self.fg_thr
+        # 取xyz，3维度预测的最大, (X_in, Y_in, Z_in, bg)
         bg_mask = ~group_inside_mask.max(dim=0, keepdim=True)[0]
         group_inside_mask = torch.cat([group_inside_mask, bg_mask], dim=0)
 
+        # 把获得的前景mask做扩展
         one_mask = x.features.new_zeros((x.batch_size, 1, x.spatial_shape[0], x.spatial_shape[1]))
         for gidx, inside_mask in enumerate(group_inside_mask):
-            selected_indices = x.indices[inside_mask]
+            selected_indices = x.indices[inside_mask] # 在xyz轴上满足要求的
             single_one_mask = spconv.SparseConvTensor(
                 features=x.features.new_ones(selected_indices.shape[0], 1),
                 indices=selected_indices,
@@ -448,17 +451,18 @@ class SparseHEDNet(nn.Module):
                 batch_size=x.batch_size
             ).dense()
             pooling_size = self.group_pooling_kernel_size[gidx]
+            # 特征扩张通过max pool的操作
             single_one_mask = F.max_pool2d(single_one_mask, kernel_size=pooling_size, stride=1, padding=pooling_size // 2)
             one_mask = torch.maximum(one_mask, single_one_mask)
 
-        zero_indices = (one_mask[:, 0] > 0).nonzero().int()
-        zero_features = x.features.new_zeros((len(zero_indices), x.features.shape[1]))
+        zero_indices = (one_mask[:, 0] > 0).nonzero().int() # 扩张完地方的mask
+        zero_features = x.features.new_zeros((len(zero_indices), x.features.shape[1])) #
 
         cat_indices = torch.cat([x.indices, zero_indices], dim=0)
         cat_features = torch.cat([x.features, zero_features], dim=0)
         indices_unique, _inv = torch.unique(cat_indices, dim=0, return_inverse=True)
         features_unique = x.features.new_zeros((indices_unique.shape[0], x.features.shape[1]))
-        features_unique.index_add_(0, _inv, cat_features)
+        features_unique.index_add_(0, _inv, cat_features) #扩张的区域，除了核心点都为0
 
         x = spconv.SparseConvTensor(
             features=features_unique,
@@ -514,13 +518,14 @@ class SparseHEDNet2D(SparseHEDNet):
         voxel_coords = batch_dict['voxel_coords']
         batch_size = batch_dict['batch_size']
 
+        # 2D map
         x = spconv.SparseConvTensor(
             features=voxel_features,
             indices=voxel_coords[:, [0, 2, 3]].int(),
             spatial_shape=self.sparse_shape,
             batch_size=batch_size
         )
-
+        # 由spconv组成
         for layer in self.sed_layers:
             x = layer(x)
 

@@ -7,8 +7,8 @@ import tqdm
 
 from pcdet.models import load_data_to_gpu
 from pcdet.utils import common_utils
-from waymo_open_dataset import label_pb2
-from waymo_open_dataset.protos import metrics_pb2
+#from waymo_open_dataset import label_pb2
+#from waymo_open_dataset.protos import metrics_pb2
 
 
 def statistics_info(cfg, ret_dict, metric, disp_dict):

@@ -33,7 +33,7 @@ class PFNLayerV2(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, inputs, unq_inv):
-
+        
         x = self.linear(inputs)
         x = self.norm(x) if self.use_norm else x
         x = self.relu(x)
@@ -137,6 +137,7 @@ class DynamicPillarVFE(VFETemplate):
                                    ), dim=1)
         voxel_coords = voxel_coords[:, [0, 3, 2, 1]]
 
+        # 把点云切换为voxel形式，voxel编码了center feature和centroid feature
         batch_dict['voxel_features'] = batch_dict['pillar_features'] = features
         batch_dict['voxel_coords'] = voxel_coords
         return batch_dict

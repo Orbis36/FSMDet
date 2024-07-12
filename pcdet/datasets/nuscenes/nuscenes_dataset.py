@@ -20,6 +20,7 @@ class NuScenesDataset(DatasetTemplate):
             dataset_cfg=dataset_cfg, class_names=class_names, training=training, root_path=root_path, logger=logger
         )
         self.infos = []
+        self.training_rate = dataset_cfg.TRAINING_RATIO
         self.camera_config = self.dataset_cfg.get('CAMERA_CONFIG', None)
         if self.camera_config is not None:
             self.use_camera = self.camera_config.get('USE_CAMERA', True)
@@ -50,6 +51,7 @@ class NuScenesDataset(DatasetTemplate):
                 infos = pickle.load(f)
                 nuscenes_infos.extend(infos)
 
+        nuscenes_infos = nuscenes_infos[:int(len(infos)*self.training_rate)]
         self.infos.extend(nuscenes_infos)
         self.logger.info('Total samples for NuScenes dataset: %d' % (len(nuscenes_infos)))
 
